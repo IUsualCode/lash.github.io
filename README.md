@@ -1,2 +1,0 @@
-# lash.github.io
-Lash
