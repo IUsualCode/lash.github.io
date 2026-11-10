@@ -42,6 +42,21 @@ textarea{resize:vertical;display:block}
 input[type=file]{font-size:13px;padding:8px}
 .rw>select{flex:1 1 0}
 .rw>input{flex:0 0 90px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:6px 0}
+.cal b{text-align:center;font-size:11px;background:var(--card);border-radius:6px;padding:2px 0}
+.cd{height:46px;border:1.5px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit;font-size:14px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;min-width:0}
+.cd i{font-style:normal;font-size:10px;font-weight:700}
+.cd.has{background:var(--ac);color:var(--onac);border-color:var(--ac)}
+.cd.dn{background:var(--ac2)}
+.cd.td{font-weight:800;text-decoration:underline}
+.cd.sl{box-shadow:0 0 0 3px var(--card);transform:scale(1.07);position:relative;z-index:1}
+html{max-width:100%;overscroll-behavior-x:none;touch-action:pan-y pinch-zoom}
+body{position:relative;width:100%;max-width:100%;touch-action:pan-y pinch-zoom}
+.w{width:100%;overflow-x:hidden;overflow-x:clip}
+.grid>*{min-width:0}
+.st .v{font-size:clamp(15px,5vw,19px)}
+input,select,textarea{font-size:16px}
+label,.mu,.b{overflow-wrap:anywhere}
 #v>label,#v>.mu{display:inline-block;background:var(--card);color:var(--tx);padding:4px 10px;border-radius:10px;border:1.5px solid var(--bd)}
 </style>
 </head>
@@ -52,7 +67,7 @@ input[type=file]{font-size:13px;padding:8px}
 </div>
 <nav><button data-t="a">Записи</button><button data-t="j">Журнал</button><button data-t="p">Прайс</button><button data-t="d">Копия</button></nav>
 <script>
-var KEY="lashbrow_v1",S,tab="a",flt="up",fm=today().slice(0,7),showF=false;
+var editId=null,cm=today().slice(0,7),cd=today(),KEY="lashbrow_v1",S,tab="a",flt="up",fm=today().slice(0,7),showF=false;
 var DEF={services:[
 {id:1,name:"Наращивание классика",price:2500},
 {id:2,name:"Наращивание 2D",price:3000},
@@ -71,23 +86,23 @@ function $(i){return document.getElementById(i)}
 function render(){
  document.querySelectorAll("nav button").forEach(function(b){b.className=b.dataset.t===tab?"on":""});
  $("v").innerHTML=tab==="a"?vA():tab==="j"?vJ():tab==="d"?vD():vP();
- if(tab==="a"&&$("rows"))addRow();
+ if(tab==="a"&&$("rows")){var ea2=editId?S.appts.filter(function(a){return a.id===editId})[0]:null;if(ea2){(ea2.items&&ea2.items.length?ea2.items:[{sid:ea2.sid,name:ea2.name,price:ea2.price}]).forEach(function(x){addRow(x)})}else addRow()}
 }
 function vA(){
- var t=today(),list=S.appts.filter(function(a){return flt==="all"||(flt==="today"?a.date===t:a.status==="new")});
+ var t=today(),list=S.appts.filter(function(a){return flt==="all"?true:(flt==="today"?a.date===t:a.date===cd)});
  list.sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1});
- var h='<button class="btn" onclick="showF=!showF;render()">'+(showF?"Закрыть":"+ Новая запись")+'</button>';
+ var h='<button class="btn" onclick="showF=!showF;editId=null;render()">'+(showF?"Закрыть":"+ Новая запись")+'</button>';
  if(showF){
-  var names=[];S.appts.forEach(function(a){if(names.indexOf(a.client)<0)names.push(a.client)});
-  h+='<div class="card"><label>Клиент</label><input id="fc" list="cl" oninput="autoPh()"><datalist id="cl">'+names.map(function(n){return'<option value="'+esc(n)+'">'}).join("")+'</datalist>'
-  +'<label>Телефон</label><input id="fp" type="tel">'
-  +'<div class="r"><div><label>Дата</label><input id="fd" type="date" value="'+t+'"></div><div><label>Время</label><input id="ft" type="time" value="10:00"></div></div>'
+  var ea=editId?S.appts.filter(function(a){return a.id===editId})[0]:null;var names=[];S.appts.forEach(function(a){if(names.indexOf(a.client)<0)names.push(a.client)});
+  h+='<div class="card"><label>Клиент</label><input id="fc" list="cl" oninput="autoPh()" value="'+esc(ea?ea.client:"")+'"><datalist id="cl">'+names.map(function(n){return'<option value="'+esc(n)+'">'}).join("")+'</datalist>'
+  +'<label>Телефон</label><input id="fp" type="tel" value="'+esc(ea?ea.phone:"")+'">'
+  +'<div class="r"><div><label>Дата</label><input id="fd" type="date" value="'+(ea?ea.date:(flt==="up"?cd:t))+'"></div><div><label>Время</label><input id="ft" type="time" value="'+(ea?ea.time:"10:00")+'"></div></div>'
   +'<label>Услуги</label><div id="rows"></div><button class="btn sm" style="margin-top:6px" onclick="addRow()">+ Добавить услугу</button><div class="row b" style="margin-top:10px"><span>Итого</span><span id="tot">0 ₽</span></div>'
   
-  +'<label>Заметка</label><input id="fn"><button class="btn" onclick="addA()">Сохранить запись</button></div>';
+  +'<label>Заметка</label><input id="fn" value="'+esc(ea?ea.note:"")+'"><button class="btn" onclick="addA()">'+(ea?"Сохранить изменения":"Сохранить запись")+'</button></div>';
  }
- h+='<div class="chips"><button class="chip '+(flt==="up"?"on":"")+'" onclick="flt=\'up\';render()">Активные</button><button class="chip '+(flt==="today"?"on":"")+'" onclick="flt=\'today\';render()">Сегодня</button><button class="chip '+(flt==="all"?"on":"")+'" onclick="flt=\'all\';render()">Все</button></div>';
- if(!list.length)h+='<div class="card mu">Записей нет</div>';
+ if(!showF)h+=vNear(t);h+='<div class="chips"><button class="chip '+(flt==="up"?"on":"")+'" onclick="flt=\'up\';render()">Активные</button><button class="chip '+(flt==="today"?"on":"")+'" onclick="flt=\'today\';render()">Сегодня</button><button class="chip '+(flt==="all"?"on":"")+'" onclick="flt=\'all\';render()">Все</button></div>';
+ if(flt==="up")h+=vCal();if(!list.length)h+='<div class="card mu">'+(flt==="up"?fd(cd)+": записей нет, свободно":"Записей нет")+'</div>';
  var last="";
  list.forEach(function(a){
   if(a.date!==last){last=a.date;h+='<div class="day">'+fd(a.date)+'</div>'}
@@ -98,22 +113,40 @@ function vA(){
   +(a.status!=="done"?'<button class="btn sm g" onclick="setS('+a.id+',\'done\')">✓ Выполнена</button>':'')
   +(a.status==="new"?'<button class="btn sm x" onclick="setS('+a.id+',\'cancel\')">Отмена</button>':'')
   +(a.status!=="new"?'<button class="btn sm" onclick="setS('+a.id+',\'new\')">Вернуть</button>':'')
-  +'<button class="btn sm x" onclick="delA('+a.id+')">🗑</button></div></div>';
+  +''+(a.status!=="done"?'<button class="btn sm" onclick="editA('+a.id+')">✎ Изменить</button>':'')+'<button class="btn sm x" onclick="delA('+a.id+')">🗑</button></div></div>';
  });
  return h;
 }
 function svc(r){return S.services.filter(function(x){return String(x.id)===r.querySelector("select").value})[0]}
-function items(){return Array.prototype.map.call(document.querySelectorAll("#rows>.rw"),function(r){var s=svc(r);return{sid:s?s.id:0,name:s?s.name:"Услуга",price:+r.querySelector("input").value||0}})}
+function items(){return Array.prototype.map.call(document.querySelectorAll("#rows>.rw"),function(r){var sl=r.querySelector("select");return{sid:+sl.value||0,name:(sl.selectedOptions[0]||{}).text||"Услуга",price:+r.querySelector("input").value||0}})}
 function pick(sel){var r=sel.parentNode,s=svc(r);r.querySelector("input").value=s?s.price:"";calc()}
-function addRow(){var d=document.createElement("div");d.className="row rw";d.style.cssText="margin:4px 0;gap:6px";d.innerHTML='<select style="flex:1" onchange="pick(this)">'+S.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join("")+'</select><input type="number" inputmode="numeric" oninput="calc()" style="width:90px"><button class="btn sm x" onclick="this.parentNode.remove();calc()">✕</button>';$("rows").appendChild(d);pick(d.querySelector("select"))}
+function addRow(it){var d=document.createElement("div");d.className="row rw";d.style.cssText="margin:4px 0;gap:6px";d.innerHTML='<select style="flex:1" onchange="pick(this)">'+S.services.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join("")+'</select><input type="number" inputmode="numeric" oninput="calc()" style="width:90px"><button class="btn sm x" onclick="this.parentNode.remove();calc()">✕</button>';$("rows").appendChild(d);var sl=d.querySelector("select");if(it){if(sl.querySelector('option[value="'+it.sid+'"]')===null){sl.add(new Option(it.name,it.sid))}sl.value=it.sid;d.querySelector("input").value=it.price;calc()}else pick(sl)}
 function calc(){var t=$("tot");if(!t)return;t.textContent=rub(items().reduce(function(a,i){return a+i.price},0))}
 function autoPh(){var c=$("fc").value,a=S.appts.filter(function(x){return x.client===c&&x.phone})[0];if(a&&!$("fp").value)$("fp").value=a.phone}
 function addA(){
  var c=$("fc").value.trim();if(!c){alert("Укажите клиента");return}if(!$("fd").value){alert("Укажите дату");return}
  var it=items();if(!it.length){alert("Добавьте хотя бы одну услугу");return}
- S.appts.push({id:id(),date:$("fd").value,time:$("ft").value,client:c,phone:$("fp").value.trim(),items:it,name:it.map(function(i){return i.name}).join(" + "),price:it.reduce(function(a,i){return a+i.price},0),status:"new",note:$("fn").value.trim()});
- save();showF=false;render();
+ var old=editId?S.appts.filter(function(a){return a.id===editId})[0]:null;S.appts=S.appts.filter(function(a){return a.id!==editId});S.appts.push({id:old?old.id:id(),date:$("fd").value,time:$("ft").value,client:c,phone:$("fp").value.trim(),items:it,name:it.map(function(i){return i.name}).join(" + "),price:it.reduce(function(a,i){return a+i.price},0),status:old?old.status:"new",note:$("fn").value.trim()});
+ save();showF=false;editId=null;render();
 }
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function calM(k){var p=cm.split("-");cm=ymd(new Date(+p[0],+p[1]-1+k,1)).slice(0,7);render()}
+function showAll(){flt="all";render()}
+function pickD(b){cd=b.dataset.d;render()}
+function vNear(t){var now=Date.now(),lo=now-36e5,hi=now+864e5;
+ var near=S.appts.filter(function(a){if(a.status!=="new")return false;var x=new Date(a.date+"T"+(a.time||"00:00")).getTime();return x>=lo&&x<=hi}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1});
+ return '<div class="card"><div class="b">⏰ Ближайшие 24 часа</div>'+(near.length?near.map(function(a){return '<div class="row" style="margin-top:8px"><div><span class="b">'+esc(a.time)+'</span> <span class="tag">'+(a.date===t?"сегодня":a.date<t?"вчера":"завтра")+'</span> '+esc(a.client)+'<div class="mu">'+esc(a.name)+'</div></div><div class="b">'+rub(a.price)+'</div></div>'}).join(""):'<div class="mu" style="margin-top:4px">Записей нет</div>')+'</div>'}
+function vCal(){
+ var p=cm.split("-"),Y=+p[0],M=+p[1]-1,off=(new Date(Y,M,1).getDay()+6)%7,dim=new Date(Y,M+1,0).getDate(),t=today(),n={},nw={};
+ S.appts.forEach(function(a){if(a.status==="cancel")return;n[a.date]=(n[a.date]||0)+1;if(a.status==="new")nw[a.date]=1});
+ var tt=new Date(Y,M,1).toLocaleDateString("ru-RU",{month:"long",year:"numeric"}).replace(/\s*г\.?$/,"");tt=tt.charAt(0).toUpperCase()+tt.slice(1);
+ var od=S.appts.filter(function(a){return a.status==="new"&&a.date<t}).length;
+ var h=(od?'<div class="card row"><div class="mu">⚠ Не отмечены (прошли): '+od+'</div><button class="btn sm" onclick="showAll()">Показать</button></div>':'')+'<div class="row" style="margin:6px 0"><button class="btn sm" onclick="calM(-1)">‹</button><div class="card b" style="margin:0;padding:6px 14px">'+tt+'</div><button class="btn sm" onclick="calM(1)">›</button></div><div class="cal">'+["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(function(x){return"<b>"+x+"</b>"}).join("");
+ for(var i=0;i<off;i++)h+="<span></span>";
+ for(var d=1;d<=dim;d++){var s=Y+"-"+String(M+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+  h+='<button class="cd'+(nw[s]?" has":n[s]?" dn":"")+(s===t?" td":"")+(s===cd?" sl":"")+'" data-d="'+s+'" onclick="pickD(this)">'+d+(n[s]?"<i>"+n[s]+"</i>":"")+"</button>"}
+ return h+'</div><div class="mu">Тёмные дни — есть записи, светлые — только выполненные, пустые — свободно</div>'}
+function editA(i){editId=i;showF=true;render();window.scrollTo(0,0)}
 function setS(i,st){S.appts.forEach(function(a){if(a.id===i)a.status=st});save();render()}
 function delA(i){if(confirm("Удалить запись?")){S.appts=S.appts.filter(function(a){return a.id!==i});save();render()}}
 function vJ(){
